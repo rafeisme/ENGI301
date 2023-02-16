@@ -44,6 +44,10 @@ Operations:
   - subtraction
   - multiplication
   - division
+  - Right Shift
+  - Left Shift
+  - Modulo
+  - Exponentiation
 
 Error conditions:
   - Invalid operator --> Program should exit
@@ -73,7 +77,11 @@ operators = {
     "+" : operator.add,
     "-" : operator.sub,
     "*" : operator.mul,
-    "/" : operator.truediv
+    "/" : operator.truediv,
+    ">>" : operator.rshift,
+    "<<" : operator.lshift,
+    "%" : operator.mod,
+    "**" : operator.pow
 }
 
 # ------------------------------------------------------------------------
@@ -94,18 +102,21 @@ def get_user_input():
          (None, None, None) if the inputs are invalid
     """
     try:
-        number1 = float(input("Enter first number : "))
-        number2 = float(input("Enter second number: "))
-        op      = input("Enter function (valid values are +, -, *, /): ")
+        number1 = int(input("Enter first number : "))
+        number2 = int(input("Enter second number: "))
+        op      = input("Enter function (valid values are +, -, *, /, >>, <<, %, **): ")
+            
+        
+        #Need to convert to not float!
     
         func    = operators.get(op)
     except:
         return (None, None, None)
+   
     
     return (number1, number2, func)
 
 # End def
-
 
 # ------------------------------------------------------------------------
 # Main script
@@ -126,9 +137,13 @@ if __name__ == "__main__":
     # NOTE -   - Get the input from the user (i.e. use function created above)    
     # NOTE -   - Check that all inputs are valid
     # NOTE -   - Execute the function on the numbers and print the results
-
+    try:
+        input = raw_input
+    except NameError:
+        pass
     while True:
         (num1, num2, func) = get_user_input()
+        
         
         if (num1 == None) or (num2 == None) or (func == None):
             print("Invalid input")
