@@ -5,10 +5,10 @@ import time
 import Adafruit_BBIO.GPIO as GPIO
 
 GPIO.setup("USR3", GPIO.OUT)
-GPIO.setup("P2_2", GPIO.IN)
+GPIO.setup("P2_1", GPIO.IN)
 
 while True:
-    if GPIO.input("P2_2") < 1: 
+    if GPIO.input("P2_1") < 1: 
         GPIO.output("USR3", GPIO.HIGH)
     else:
         GPIO.output("USR3", GPIO.LOW)
