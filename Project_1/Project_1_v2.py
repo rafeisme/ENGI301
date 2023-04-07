@@ -108,8 +108,7 @@ class PocketKerbal():
     """ PocketKerbal """
     reset_time     = None
     button         = None
-    red_led        = None
-    green_led      = None
+    stage_led        = None
     potentiometer_throt  = None
     potentiometer_SAS = None
     potentiometer_display = None
@@ -121,15 +120,14 @@ class PocketKerbal():
     #cob            = None
     
     def __init__(self, reset_time=2.0, button="P2_1", 
-                       red_led="P2_6", green_led="P2_4",
+                       stage_led="P1_3",
                        potentiometer_throt="P1_02",potentiometer_display="P1_27",potentiometer_SAS="P2_36",joystickL=1,joystickR=2, cob = None,
                        i2c_bus=1, i2c_address=0x70):
         """ Initialize variables and set up display """
 
         self.reset_time     = reset_time
         self.button         = BUTTON.Button(button)
-        self.red_led        = LED.LED(red_led)
-        self.green_led      = LED.LED(green_led)
+        #self.stage_led        = LED.LED(stage_led)
         self.potentiometer_throt  = POT.Potentiometer(potentiometer_throt)
         self.potentiometer_display  = POT.Potentiometer(potentiometer_display)
         self.potentiometer_SAS  = POT.Potentiometer(potentiometer_SAS)
@@ -206,6 +204,7 @@ class PocketKerbal():
         GPIO.setup("P2_34", GPIO.IN)
 
         # Button / LEDs / Potentiometer
+        #GPIO.setup("P1_3", GPIO.OUT)
         #   - All initialized by libraries when instanitated
 
     # End def
@@ -342,9 +341,18 @@ class PocketKerbal():
                 stage_state = GPIO.input("P2_34")
                 vessel.control.activate_next_stage()
         """
-        if  GPIO.input("P2_34") == 0:
-            vessel.control.activate_next_stage()
-            time.sleep(0.75)
+        
+        if vessel.control.stage_lock == False:
+            #self.stage_led.on()
+            #GPIO.output("P1_3", self.GPIO.HIGH)
+            if  GPIO.input("P2_34") == 0:
+                vessel.control.activate_next_stage()
+                time.sleep(0.75)
+        #else:
+            #self.stage_led.off()
+            # GPIO.output("P1_3", self.GPIO.LOW)
+
+
         
         """
         #Check Brakes
@@ -473,10 +481,12 @@ class PocketKerbal():
         
         #Time Warp Controls
         #Time Warp Stop
-        #if  GPIO.input("P2_28") == 0:
-         #   rails_warp_factor = 0
+        if  GPIO.input("P2_28") == 0:
+           rails_warp_factor = 0
          
+        
         """
+        
         #Yaw
         raw_yaw = self.joystickL.get_value(0) #0-4095
         yaw_val = (raw_yaw / 2048) - 1
@@ -509,9 +519,9 @@ class PocketKerbal():
 
         # Clean up hardware
         # self.button.cleanup()
-        self.red_led.cleanup()
-        self.green_led.cleanup()
-        self.potentiometer.cleanup()
+        #self.red_led.cleanup()
+        #self.green_led.cleanup()
+        #self.potentiometer.cleanup()
 
     # End def
 
