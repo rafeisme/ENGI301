@@ -6,8 +6,45 @@ License:
 Copyright 2023 - Rafe Neathery
 Built on framework of combo_lock code by Erik Welsh
 
-This is a cobs encode and decode script created by cmcqueen. 
-https://github.com/cmcqueen/cobs-python/blob/main/python3/cobs/cobs/_cobs_py.py
+This code makes use of the incredible kRPC mod and python library.
+More information and the download link can be found here: 
+https://github.com/krpc/krpc
+
+My Hackster project for this can be found here: https://www.hackster.io/rfn1/pocketkerbal-ksp-console-using-pocketbeagle-krpc-d380ad 
+
+    The following license is copied from the kRPC Github:
+    This license (LGPL v3) applies to all parts of kRPC except for the following:
+
+  - service/SpaceCenter/* is under the GPLv3 license.
+
+  - service/SpaceCenter/src/ExtensionMethods/StockAerodynamics.cs
+    is adapted from the KSP Trajectories mod (https://github.com/neuoy/KSPTrajectories)
+    released under the MIT License (MIT) by Youen Toupin, aka neuoy
+
+  - service/SpaceCenter/src/NameTag/*
+    is adapted from the kOS mod (https://github.com/KSP-KOS/KOS)
+    released under the GPLv3 license
+
+  - tools/clientgen/* is under the GPLv3 license.
+
+  - tools/ServiceDefinitions/* is under the GPLv3 license.
+
+  - protobuf/* is under the MIT license.
+
+    Copyright 2015-2023 kRPC Org
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the Lesser GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    Lesser GNU General Public License for more details.
+
+    You should have received a copy of the Lesser GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 Redistribution and use in source and binary forms, with or without 
 modification, are permitted provided that the following conditions are met:
@@ -36,47 +73,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------
 
 Use the following hardware components to recieve and send information to Kerbal Space Program:  
-  - HT16K33 Display
-  - Button
-  - Red LED
-  - Green LED
-  - Potentiometer (analog input)
+  - LCD Display
+  - Buttons
+  - Switches
+  - Potentiometers
+  - Joysticks
+  - LED Bars
 
-Requirements:
-UPDATE ME LATER
-  - Hardware:
-    - When locked:   Red LED is on; Green LED is off; Servo is "closed"; Display is unchanged
-    - When unlocked: Red LED is off; Green LED is on; Servo is "open"; Display is "----"
-    - Display shows value of potentiometer (raw value of analog input divided by 8)
-    - Button
-      - Waiting for a button press should allow the display to update (if necessary) and return any values
-      - Time the button was pressed should be recorded and returned
-    - User interaction:
-      - Needs to be able to program the combination for the “lock”
-        - Need to be able to input three values for the combination to program or unlock the “lock”
-      - Combination lock should lock when done programming and wait for combination input
-      - If combination is unsuccessful, the lock should go back to waiting for combination input
-      - If combination was successful, the lock should unlock
-        - When unlocked, pressing button for less than 2s will re-lock the lock; greater than 2s will allow lock to be re-programmed
+
 
 Uses:
   - Libraries developed in class
 
 """
 import time
-
 import serial
 
 import board
 import digitalio
 import adafruit_character_lcd.character_lcd as characterlcd
-
 import Adafruit_BBIO.GPIO as GPIO
-
-#from array import array
-
-from cobs import cobs
-
 import array         as arr
 
 import ht16k33       as HT16K33
@@ -84,12 +100,7 @@ import button        as BUTTON
 import potentiometer as POT
 import led           as LED
 import Joystick      as JOYSTICK
-#import LCD           as DISPLAY
-# ------------------------------------------------------------------------
-# Constants
-# ------------------------------------------------------------------------
 
-POT_DIVIDER        = 8       # Divider used to help reduce potentiometer granularity
 
 # ------------------------------------------------------------------------
 # Global variables
@@ -98,11 +109,6 @@ POT_DIVIDER        = 8       # Divider used to help reduce potentiometer granula
 # ------------------------------------------------------------------------
 # Functions / Classes
 # ------------------------------------------------------------------------
-
-#port = '/dev/ttyGS0'
-        
-    #com = serial.Serial(port,115200,timeout=5)
-#comSerial = serial.Serial(port, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, timeout=2, stopbits=serial.STOPBITS_ONE)
 
 class PocketKerbal():
     """ PocketKerbal """
@@ -117,7 +123,6 @@ class PocketKerbal():
     display        = None
     debug          = None
     stage_state     = None
-    #cob            = None
     
     def __init__(self, reset_time=2.0, button="P2_1", 
                        stage_led="P1_3",
@@ -127,15 +132,12 @@ class PocketKerbal():
 
         self.reset_time     = reset_time
         self.button         = BUTTON.Button(button)
-        #self.stage_led        = LED.LED(stage_led)
         self.potentiometer_throt  = POT.Potentiometer(potentiometer_throt)
         self.potentiometer_display  = POT.Potentiometer(potentiometer_display)
         self.potentiometer_SAS  = POT.Potentiometer(potentiometer_SAS)
         self.joystickL      = JOYSTICK.Joystick(joystickL)
         self.joystickR      = JOYSTICK.Joystick(joystickR)
         self.display        = HT16K33.HT16K33(i2c_bus, i2c_address)
-        #self.lcd            = DISPLAY.LCD()
-       # self.cob            = COB.Cobs(cob)
         self.debug          = True
         
         lcd_rs = digitalio.DigitalInOut(board.P1_4)
@@ -151,8 +153,7 @@ class PocketKerbal():
     
         lcd_columns = 16
         lcd_rows = 2
-        
-        #self._setup()
+
     
     def _setup(self):
         """Setup the hardware components."""
@@ -203,19 +204,16 @@ class PocketKerbal():
         GPIO.setup("P2_32", GPIO.IN)
         GPIO.setup("P2_34", GPIO.IN)
 
-        # Button / LEDs / Potentiometer
-        #GPIO.setup("P1_3", GPIO.OUT)
-        #   - All initialized by libraries when instanitated
 
     # End def
     
     def init(self):
-        
+        #Can't quite remember what this does
         return False
 
     
     def HandshakekRPC(self):
-        
+        #Don't think I'm currently using this
         import krpc
         conn = krpc.connect(name='Hello World', address="192.168.7.1")
         vessel = conn.space_center.active_vessel
@@ -238,6 +236,8 @@ class PocketKerbal():
         self.message("Connected!")
             
         stage_state =  GPIO.input("P2_34")  
+        
+        #Will Add debug feature eventually
         """
         if(debug == True):
             self.ReadControls()
@@ -245,14 +245,15 @@ class PocketKerbal():
             self.WriteLCD()
         else:
         """
-        while(1):
+        #Repeat these two until program is stopped
+        while(1): 
             #self.Set_Display(vessel,conn)
             self.Controls(vessel)
        
 
     # End def
 
-    
+    #Send
     def message(self, msg):
         
                 
@@ -277,7 +278,8 @@ class PocketKerbal():
     #End def
     
     def Set_Display(self,vessel,conn):
-        
+        #Currently disabled
+        #Checks potentiometer state to determine what to display
         raw_disp = self.potentiometer_display.get_value() 
         disp_val = int(raw_disp // 682)
         if disp_val == 0:
@@ -409,11 +411,13 @@ class PocketKerbal():
         else:
             vessel.control.set_action_group(7,True)
         
+        """
         #Check SAS and set mode
         if  GPIO.input("P2_25") > 0:
             vessel.control.sas = False
         else:
             vessel.control.sas = True
+        """
             raw_sas = self.potentiometer_SAS.get_value() #0-4095
             print(raw_sas)
             sas_val = int(raw_sas // 409)
@@ -513,15 +517,8 @@ class PocketKerbal():
         """Cleanup the hardware components."""
         
         # Set Display to something fun to show program is complete
-        #self.display.text("DEAD")
         self.message("That did\n NOT work")
         
-
-        # Clean up hardware
-        # self.button.cleanup()
-        #self.red_led.cleanup()
-        #self.green_led.cleanup()
-        #self.potentiometer.cleanup()
 
     # End def
 
